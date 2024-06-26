@@ -20,7 +20,7 @@ class Consumer(AsyncWebsocketConsumer):
         print('connected')
         self.socket = "socket"
 
-        db_string = "mysql+pymysql://szyszka1:reiUvwMb9qAjpyiN@mysql.agh.edu.pl/szyszka1"
+        db_string = "mysql+pymysql://szewczyk:hbe2m7tZmX56ectN@mysql.agh.edu.pl/szewczyk"
         self.engine = create_engine(db_string)
 
         Base.metadata.create_all(self.engine)
