@@ -10,6 +10,8 @@ import requests_cache
 import pandas as pd
 from retry_requests import retry
 import datetime
+import time
+import pytz
 
 
 
@@ -95,30 +97,9 @@ class WindMeasurement(Base):
     wind_gusts_10m = Column(Float)
     measurement = relationship("Measurement", back_populates="wind_measurements")
 
-class SensorConnection(threading.Thread):
-    def __init__(self, port, ip_address='localhost') -> None:
-        threading.Thread.__init__(self)
-        self.port = port
-        self.ip_address = ip_address
-        self.sensor_socket = socket.socket()
-        self.buffer = []
-    
-    def run(self):
-        try:
-            self.sensor_socket.connect((self.ip_address, self.port))
-            while True:
-                self.buffer.append(self.sensor_socket.recv(1024).decode())
-        except:
-            self.sensor_socket.close()
 
 
 def add_sensor(name, loc, lat, long):
-    from sqlalchemy.sql import text
-    stmt = text('select * from sensors')
-
-    results = session.execute(stmt).fetchall()
-
-    print(results)
     sensor = Sensor(name=name, location=loc, latitude=lat, longitude=long)
     return sensor
 
@@ -189,7 +170,7 @@ def add_combined_measurement(sensor_name, act_time, temperature, humidity, appar
     session.add(wind_measurement)
     session.commit()
 
-db_string = "mysql+pymysql://szyszka1:reiUvwMb9qAjpyiN@mysql.agh.edu.pl/szyszka1"
+db_string = "mysql+pymysql://szewczyk:hbe2m7tZmX56ectN@mysql.agh.edu.pl/szewczyk"
 
 engine = create_engine(db_string)
 
@@ -198,55 +179,72 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
+used_sensors = [{'name':"sensor_1", 'location':"New York", 'latitude':40.7296, 'longitude':-73.9497}, 
+           {'name':"sensor_2", 'location':"San Francisco", 'latitude':37.7893, 'longitude':-122.422},
+           {'name':"sensor_3", 'location':"Phoenix", 'latitude':33.4484, 'longitude':-112.074},
+           {'name':"sensor_4", 'location':"Dallas", 'latitude':32.7792, 'longitude':-96.8089},
+           {'name':"sensor_5", 'location':"Miami", 'latitude':25.7617, 'longitude':-80.1918}]
+
+
 if __name__ == '__main__':
-    counter = 10000000 # Czas
-    c = 0
+    
+    # Dodawanie sensorow do bazy danych
+    for sen in used_sensors:
+        stmt = text(f'select * from sensors')
+        results = session.execute(stmt).fetchall()
+
+        if any(el[3] == sen['latitude'] for el in results) and any(el[4] == sen['longitude'] for el in results):
+            pass
+        else:
+            sensor = add_sensor(sen['name'], sen['location'], sen['latitude'], sen['longitude'])
+            session.add(sensor)
+            session.commit()
+            print('aaaa')
+
+
+    #TODO: przerobić dodawanie danych (co godzinę)
+    stmt = text(f'SELECT timestamp FROM measurements ORDER BY timestamp DESC LIMIT 1')
+    result = session.execute(stmt).fetchone()
+
+    if result:
+        last_appended_time = result[0]
+    else:
+        last_appended_time = datetime.datetime.now(datetime.UTC)
+    
     while True:
-        list_of_values = []
-        while c <= counter:
-            # print(c)
-            if c < counter:
-                pass
-            else:
-                ##### WAŻNE #####
-                Session = sessionmaker(bind=engine)
-                session = Session()
-                stmt = text('select * from sensors')
-                results = session.execute(stmt).fetchall()
-                print(results)
 
+        current_time = datetime.datetime.now(datetime.UTC)
+        naive_current_time = current_time.replace(tzinfo=None)
+ 
+        if (naive_current_time - last_appended_time) > datetime.timedelta(hours=1, minutes=15):
 
-                #######################
-                # Setup the Open-Meteo API client with cache and retry on error
-                cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-                retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-                openmeteo = openmeteo_requests.Client(session = retry_session)
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            stmt = text('select * from sensors')
+            results = session.execute(stmt).fetchall()
+            print(results)
 
-                # Make sure all required weather variables are listed here
-                # The order of variables in current or daily is important to assign them correctly below
-                url = "https://api.open-meteo.com/v1/gfs"
+            cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
+            retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+            openmeteo = openmeteo_requests.Client(session = retry_session)
+
+            url = "https://api.open-meteo.com/v1/gfs"
+
+            act_time = 0
+            for sen in used_sensors:
+
                 params = {
-                    "latitude": 40.730610,
-                    "longitude": -73.935242,
+                    "latitude": sen['latitude'],
+                    "longitude": sen['longitude'],
                     "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", \
                                 "rain", "showers", "snowfall", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", \
                                 "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"],
-                    "current": ["temperature_2m", "relative_humidity_2m", "apparent_temperature", "is_day", "precipitation", \
-                                "rain", "showers", "snowfall", "weather_code", "cloud_cover", "pressure_msl", "surface_pressure", \
-                                "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m"],
-                    "past_days": 7,
-                    "forecast_days": 0,
                 }
+
                 responses = openmeteo.weather_api(url, params=params)
 
-                # Process first location. Add a for-loop for multiple locations or weather models
                 response = responses[0]
-                print(f"Coordinates {response.Latitude()}°N {response.Longitude()}°E")
-                print(f"Elevation {response.Elevation()} m asl")
-                print(f"Timezone {response.Timezone()} {response.TimezoneAbbreviation()}")
-                print(f"Timezone difference to GMT+0 {response.UtcOffsetSeconds()} s")
 
-                # Current values. The order of variables needs to be the same as requested.
                 current = response.Current()
                 current_temperature_2m = current.Variables(0).Value()
                 current_relative_humidity_2m = current.Variables(1).Value()
@@ -264,73 +262,34 @@ if __name__ == '__main__':
                 current_wind_direction_10m = current.Variables(13).Value()
                 current_wind_gusts_10m = current.Variables(14).Value()
 
+                unix_timestamp = current.Time()
+                act_time = datetime.datetime.utcfromtimestamp(unix_timestamp)
 
-                date_range_with_tz = pd.date_range(
-                    start=pd.to_datetime(current.Time(), unit="s", utc=True),
-                    end=pd.to_datetime(current.TimeEnd(), unit="s", utc=True),
-                    freq=pd.Timedelta(seconds=current.Interval()),
-                    inclusive="left"
-                )
-
-                date_range_naive = date_range_with_tz.tz_convert(None)
-
-                current_data = {
-                    "date": date_range_naive,
-                    "temperature_2m": current_temperature_2m,
-                    "relative_humidity_2m": current_relative_humidity_2m,
-                    "apparent_temperature": current_apparent_temperature,
-                    "precipitation": current_precipitation,
-                    "rain": current_rain,
-                    "is_day": current_rain,
-                    "showers": current_showers,
-                    "snowfall": current_snowfall,
-                    "weather_code": current_weather_code,
-                    "pressure_msl": current_pressure_msl,
-                    "surface_pressure": current_surface_pressure,
-                    "cloud_cover": current_cloud_cover,
-                    "wind_speed_10m": current_wind_speed_10m,
-                    "wind_direction_10m": current_wind_direction_10m,
-                    "wind_gusts_10m": current_wind_gusts_10m,
-                }
-
-                current_dataframe = pd.DataFrame(data=current_data)
-                sensor_1 = add_sensor("Sensor", "New York", response.Latitude(), response.Longitude())
-                stmt = text(f'select * from sensors where latitude = {response.Latitude()} && longitude = {response.Longitude()} ')
-                results = session.execute(stmt).fetchall()
-
-                if results[0][3] == round(response.Latitude(), 4) and results[0][4] == round(response.Longitude(), 4):
-                    pass
-                else:
-                    session.add(sensor_1)
-
-                for index, row in current_dataframe.iterrows():
-                    act_time = row['date']
-                    add_combined_measurement(
-                    sensor_1.name,
+                add_combined_measurement(
+                    sen['name'],
                     act_time,
-                    row['temperature_2m'],
-                    row['relative_humidity_2m'],
-                    row['apparent_temperature'],
-                    row['is_day'],
-                    row['precipitation'],
-                    row['rain'],
-                    row['showers'],
-                    row['snowfall'],
-                    row['pressure_msl'],
-                    row['surface_pressure'],
-                    row['cloud_cover'],
-                    row['weather_code'],
-                    row['wind_speed_10m'],
-                    row['wind_direction_10m'],
-                    row['wind_gusts_10m']
+                    current_temperature_2m,
+                    current_relative_humidity_2m,
+                    current_apparent_temperature,
+                    current_is_day,
+                    current_precipitation,
+                    current_rain,
+                    current_showers,
+                    current_snowfall,
+                    current_pressure_msl,
+                    current_surface_pressure,
+                    current_cloud_cover,
+                    current_weather_code,
+                    current_wind_speed_10m,
+                    current_wind_direction_10m,
+                    current_wind_gusts_10m,
                 )
+
                 stmt = text(f'select count(*) from measurements')
                 results = session.execute(stmt).fetchall()
                 print(results)
-            c += 1
-            
 
-        # Insert do bazy wszystkich z list_of_values
-        c = 0
+            last_appended_hour = act_time
+            session.close()
 
     
