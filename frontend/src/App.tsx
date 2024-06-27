@@ -79,7 +79,7 @@ function App() {
                     // @ts-ignore
                     { x: data.temperature_plot.date,
                       y: data.temperature_plot.temperature,
-                      type: 'scatter',
+                      type: 'lines+markers',
                       mode: 'markers',
                       marker: {color: 'red'},
                     }
@@ -117,7 +117,7 @@ function App() {
                   ]);
 
 
-                  
+
                 // pressure
 
                 const pressureData = data.pressure_plot;
