@@ -80,7 +80,7 @@ function App() {
                     { x: data.temperature_plot.date,
                       y: data.temperature_plot.temperature,
                       type: 'lines+markers',
-                      mode: 'markers',
+                      mode: 'lines+markers',
                       marker: {color: 'red'},
                     }
                   ]);
@@ -151,21 +151,6 @@ function App() {
                   />
                 );
 
-
-
-                // // @ts-ignore
-                // setPlotPressure([
-                //     // @ts-ignore
-                //     { x: data.pressure_plot.date,
-                //       y: data.pressure_plot.value,
-                //       fill: 'tozeroy',
-                //       type: 'scatter',
-                //       mode: 'lines',
-                //       line: { color: 'blue' },
-                //     }
-                //   ]);
-
-
                 // wind
                 const windData = data.windy_plot;
                 const fixedArrowLength = 2.5; // Adjust this length to make arrows shorter
@@ -217,19 +202,6 @@ function App() {
                   />
                 );
 
-
-                // @ts-ignore
-                // setPlotWindy([
-                //     // @ts-ignore
-                //     { x: data.windy_plot.date,
-                //       y: data.windy_plot.speed,
-                //       fill: 'tozeroy',
-                //       type: 'scatter',
-                //       mode: 'lines',
-                //       line: { color: 'blue' },
-                //     }
-                //   ]);
-
                 setSensor(data.sensor)
 
             }
@@ -258,168 +230,181 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Hello</h1>
 
-      <h3>Temperatura i wilgotność</h3>
-        <div style={{display: "inline-block"}}>
-            <Plot
-              data={plotData}
-              layout={{
-                title: 'Temperatura',
-                xaxis: {
-                  title: 'Data',
-                  type: 'date',
-                },
-                yaxis: {
-                  title: 'Temperatura (°C)',
-                },
-              }}
-            />
+        <nav className="navbar navbar-dark bg-dark" style={{position: "fixed", top: 0, zIndex: 1000, width:"100%"}}>
+            <div className="container-fluid">
+                <h1 className="navbar-brand">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor"
+                         className="bi bi-cloud-sun" viewBox="0 0 16 16">
+                        <path
+                            d="M7 8a3.5 3.5 0 0 1 3.5 3.555.5.5 0 0 0 .624.492A1.503 1.503 0 0 1 13 13.5a1.5 1.5 0 0 1-1.5 1.5H3a2 2 0 1 1 .1-3.998.5.5 0 0 0 .51-.375A3.5 3.5 0 0 1 7 8m4.473 3a4.5 4.5 0 0 0-8.72-.99A3 3 0 0 0 3 16h8.5a2.5 2.5 0 0 0 0-5z"/>
+                        <path
+                            d="M10.5 1.5a.5.5 0 0 0-1 0v1a.5.5 0 0 0 1 0zm3.743 1.964a.5.5 0 1 0-.707-.707l-.708.707a.5.5 0 0 0 .708.708zm-7.779-.707a.5.5 0 0 0-.707.707l.707.708a.5.5 0 1 0 .708-.708zm1.734 3.374a2 2 0 1 1 3.296 2.198q.3.423.516.898a3 3 0 1 0-4.84-3.225q.529.017 1.028.129m4.484 4.074c.6.215 1.125.59 1.522 1.072a.5.5 0 0 0 .039-.742l-.707-.707a.5.5 0 0 0-.854.377M14.5 6.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/>
+                    </svg>
+                </h1>
 
-            <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
-                <thead>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="col"></th>
-                    <th scope="col">Wartość temperatury</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
-                    <td>{minTemp}</td>
-                </tr>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
-                    <td>{maxTemp}</td>
-                </tr>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Średnia</th>
-                    <td>{avgTemp}</td>
-                </tr>
-                </tbody>
-            </table>
+                <h1 className="navbar-brand">
+                    Aplikacja pogodowa - z Open-Meteo API
+                </h1>
+                <h1 className="navbar-brand">
+
+                </h1>
+            </div>
+        </nav>
+
+
+        <div className="container-fluid">
+            <div className="row" >
+                <div className="col-3 px-3 position-fixed" id="sticky-sidebar" style={{backgroundColor: "darkgray", height: '100%', zIndex: 1000, marginTop:75}} >
+
+                    <h1 style={{margin: 20}}>Filtry</h1>
+                    <form onSubmit={handleSubmit} style={{ margin: "auto"}}>
+                        <div style={{marginTop: 20, marginBottom: 20}}>
+                            <label style={{marginTop: 20, marginBottom: 20}}><h4>Liczba wyników</h4></label>
+                            <input style={{textAlign: "center"}} type="number" className="form-control" step={1} min={1} max={1000} defaultValue={100} onChange={e => setLimit(e.target.value)}/>
+                        </div>
+
+                        <div>
+                            <div style={{display: "block"}}>
+                                <label><h4>Zakres</h4></label>
+                            </div>
+
+                            <div style={{display: "inline-flex", width: '100%'}}>
+                                <label style={{justifyContent: "center", alignContent: "center", marginRight: 10}}><b>Od:</b></label>
+                                <input style={{marginTop: 20, marginBottom: 20}} type="date" className="form-control" defaultValue={"1990-01-01"} onChange={e => setStartDate(e.target.value)}/>
+                            </div>
+                            <div style={{display: "inline-flex", width: '100%'}}>
+                                <label style={{justifyContent: "center", alignContent: "center", marginRight: 10}}><b>Do:</b></label>
+                                <input style={{marginTop: 20, marginBottom: 20}} type="date" className="form-control" defaultValue={"2024-06-28"} onChange={e => setEndDate(e.target.value)}/>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label>Wybierz czujnik</label>
+                            <select className="form-select" aria-label="Default select example" onChange={e => setSensor(e.target.value)}>
+                                {sensors.map((d: Sensor) => {
+                                    return(
+                                        <option style={{textAlign: "center"}} key={d.id} value={d.location}>{d.location}</option>
+                                        )
+                                })}
+
+                            </select>
+                        </div>
+
+                        <button style={{marginTop: 20, marginBottom: 20, width: 120}} className="btn btn-dark" id="subbtn" type="submit" >Filtruj</button>
+                      </form>
+                </div>
+
+                <div className="col offset-3" id="main">
+                    <h1 style={{margin: 20}}>Temperatura i wilgotność</h1>
+
+                <div style={{display: "inline-block"}}>
+                    <Plot
+                      data={plotData}
+                      layout={{
+                        title: 'Temperatura',
+                        xaxis: {
+                          title: 'Data',
+                          type: 'date',
+                        },
+                        yaxis: {
+                          title: 'Temperatura (°C)',
+                        },
+                      }}
+                    />
+
+                    <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
+                        <thead>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="col"></th>
+                            <th scope="col">Wartość temperatury</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
+                            <td>{minTemp}</td>
+                        </tr>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
+                            <td>{maxTemp}</td>
+                        </tr>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Średnia</th>
+                            <td>{avgTemp}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style={{display: "inline-block"}}>
+                    <Plot
+                      data={plotHumidity}
+                      layout={{
+                        title: 'Wilgotność powietrza',
+                        xaxis: {
+                          title: 'Data',
+                          type: 'date',
+                        },
+                        yaxis: {
+                          title: 'Wilgotność (%)',
+                        },
+                      }}
+                    />
+
+                    <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
+                        <thead>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="col"></th>
+                            <th scope="col">Wilgotność</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
+                            <td>{minHum}</td>
+                        </tr>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
+                            <td>{maxHum}</td>
+                        </tr>
+                        <tr>
+                            <th style={{border: "1px black solid"}} scope="row">Średnia</th>
+                            <td>{avgHum}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                </div>
+
+
+              <h3>Ciśnienie</h3>
+
+
+                    {plotPressure}
+
+              <h3>Wiatr</h3>
+
+                    {plotWindy}
+
+
+              <h3>Zachmurzenie</h3>
+                <Plot
+                      data={plotCloudy}
+                      layout={{
+                        title: 'Zachmurzenie',
+                        xaxis: {
+                          title: 'Status',
+                          type: 'category',
+                        },
+                        yaxis: {
+                          title: 'Zachmurzenie',
+                        },
+                      }}
+                    />
+                </div>
+            </div>
         </div>
-
-        <div style={{display: "inline-block"}}>
-            <Plot
-              data={plotHumidity}
-              layout={{
-                title: 'Wilgotność powietrza',
-                xaxis: {
-                  title: 'Data',
-                  type: 'date',
-                },
-                yaxis: {
-                  title: 'Wilgotność (%)',
-                },
-              }}
-            />
-
-            <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
-                <thead>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="col"></th>
-                    <th scope="col">Wilgotność</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
-                    <td>{minHum}</td>
-                </tr>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
-                    <td>{maxHum}</td>
-                </tr>
-                <tr>
-                    <th style={{border: "1px black solid"}} scope="row">Średnia</th>
-                    <td>{avgHum}</td>
-                </tr>
-                </tbody>
-            </table>
-
-        </div>
-
-
-      <h3>Ciśnienie</h3>
-
-        {/* <Plot
-              data={plotPressure}
-              layout={{
-                title: 'Ciśnienie',
-                xaxis: {
-                  title: 'Data',
-                  type: 'date',
-                },
-                yaxis: {
-                  title: 'Ciśnienie (hPa)',
-                },
-              }}
-            /> */}
-            {plotPressure}
-
-      <h3>Wiatr</h3>
-
-        {/* <Plot
-              data={plotWindy}
-              layout={{
-                title: 'Ciśnienie',
-                xaxis: {
-                  title: 'Data',
-                  type: 'date',
-                },
-                yaxis: {
-                  title: 'Szybkość [m/s]',
-                },
-              }}
-            /> */}
-            {plotWindy}
-
-
-      <h3>Zachmurzenie</h3>
-        <Plot
-              data={plotCloudy}
-              layout={{
-                title: 'Zachmurzenie',
-                xaxis: {
-                  title: 'Status',
-                  type: 'category',
-                },
-                yaxis: {
-                  title: 'Zachmurzenie',
-                },
-              }}
-            />
-            
-
-      <form onSubmit={handleSubmit} style={{ width: 400, margin: "auto"}}>
-        <div>
-            <label>Liczba wyników</label>
-            <input type="number" className="form-control" step={1} min={1} max={1000} defaultValue={100} onChange={e => setLimit(e.target.value)}/>
-        </div>
-
-        <div>
-            <label>Zakres</label>
-            <input type="date" className="form-control" onChange={e => setStartDate(e.target.value)}/>
-            <input type="date" className="form-control" onChange={e => setEndDate(e.target.value)}/>
-        </div>
-
-        <div>
-            <label>Wybierz czujnik</label>
-            <select className="form-select" aria-label="Default select example" onChange={e => setSensor(e.target.value)}>
-                {sensors.map((d: Sensor) => {
-                    return(
-                        <option key={d.id} value={d.location}>{d.location}</option>
-                        )
-                })}
-
-            </select>
-        </div>
-
-        <button className="btn btn-dark" id="subbtn" type="submit" >Filtruj</button>
-      </form>
-
-
     </div>
   );
 }

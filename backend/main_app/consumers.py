@@ -95,7 +95,7 @@ class Consumer(AsyncWebsocketConsumer):
         stmt = text(f'SELECT temperature_measurements.temperature, measurements.timestamp FROM temperature_measurements '
                     f'JOIN measurements ON measurements.id = temperature_measurements.measurement_id '
                     f'JOIN sensors ON sensors.id = measurements.sensor_id '
-                    f'WHERE location = "{sensor_loc}" '
+                    f'WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"'
                     f'LIMIT {limit}')
         results = self.session.execute(stmt).fetchall()
         # print(results)
@@ -117,7 +117,7 @@ class Consumer(AsyncWebsocketConsumer):
                     FROM temperature_measurements 
                     JOIN measurements ON measurements.id = temperature_measurements.measurement_id 
                     JOIN sensors ON sensors.id = measurements.sensor_id 
-                    WHERE location = "{sensor_loc}"
+                    WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"
                     LIMIT {limit}
                 ) AS subquery
             ''')
@@ -131,7 +131,7 @@ class Consumer(AsyncWebsocketConsumer):
             f'SELECT temperature_measurements.humidity, measurements.timestamp FROM temperature_measurements '
             f'JOIN measurements ON measurements.id = temperature_measurements.measurement_id '
             f'JOIN sensors ON sensors.id = measurements.sensor_id '
-            f'WHERE location = "{sensor_loc}"'
+            f'WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"'
             f'LIMIT {limit}')
         results = self.session.execute(stmt).fetchall()
         print(results)
@@ -153,7 +153,7 @@ class Consumer(AsyncWebsocketConsumer):
                     FROM temperature_measurements 
                     JOIN measurements ON measurements.id = temperature_measurements.measurement_id 
                     JOIN sensors ON sensors.id = measurements.sensor_id 
-                    WHERE location = "{sensor_loc}"
+                    WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"
                     LIMIT {limit}
                 ) AS subquery
             ''')
@@ -176,19 +176,6 @@ class Consumer(AsyncWebsocketConsumer):
 
         ###### CLOUDY #####
 
-        # stmt = text('''
-        #     SELECT 
-        #         CASE
-        #             WHEN cloud_cover_total <= 33 THEN 'sunny'
-        #             WHEN cloud_cover_total > 33 AND cloud_cover_total <= 66 THEN 'medium'
-        #             ELSE 'cloudy'
-        #         END AS cloud_status,
-        #         COUNT(*) AS count
-        #     FROM cloud_measurements JOIN measurements ON measurements.id = cloud_measurements.measurement_id 
-        #     JOIN sensors ON sensors.id = measurements.sensor_id 
-        #     GROUP BY cloud_status
-        #     ORDER BY count DESC 
-        # ''')
         query = (
             select(
                 case(
