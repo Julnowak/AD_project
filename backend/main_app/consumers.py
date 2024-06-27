@@ -33,6 +33,8 @@ class Consumer(AsyncWebsocketConsumer):
         self.sensors = tables['sensors']
         self.pressure_measurements = tables["pressure_measurements"]
         self.wind_measurements = tables["wind_measurements"]
+        self.cloud_measurements = tables["cloud_measurements"]
+        self.temperature_measurements = tables["temperature_measurements"]
 
         Base.metadata.create_all(self.engine)
         Session = sessionmaker(bind=self.engine)
@@ -174,21 +176,39 @@ class Consumer(AsyncWebsocketConsumer):
 
         ###### CLOUDY #####
 
-        stmt = text('''
-            SELECT 
-                CASE
-                    WHEN cloud_cover_total <= 33 THEN 'sunny'
-                    WHEN cloud_cover_total > 33 AND cloud_cover_total <= 66 THEN 'medium'
-                    ELSE 'cloudy'
-                END AS cloud_status,
-                COUNT(*) AS count
-            FROM cloud_measurements JOIN measurements ON measurements.id = cloud_measurements.measurement_id 
-            JOIN sensors ON sensors.id = measurements.sensor_id 
-            GROUP BY cloud_status
-            ORDER BY count DESC 
-        ''')
+        # stmt = text('''
+        #     SELECT 
+        #         CASE
+        #             WHEN cloud_cover_total <= 33 THEN 'sunny'
+        #             WHEN cloud_cover_total > 33 AND cloud_cover_total <= 66 THEN 'medium'
+        #             ELSE 'cloudy'
+        #         END AS cloud_status,
+        #         COUNT(*) AS count
+        #     FROM cloud_measurements JOIN measurements ON measurements.id = cloud_measurements.measurement_id 
+        #     JOIN sensors ON sensors.id = measurements.sensor_id 
+        #     GROUP BY cloud_status
+        #     ORDER BY count DESC 
+        # ''')
+        query = (
+            select(
+                case(
+                    (self.cloud_measurements.c.cloud_cover_total <= 33, 'sunny'),
+                    (self.cloud_measurements.c.cloud_cover_total.between(34, 66), 'medium'),
+                    (self.cloud_measurements.c.cloud_cover_total > 66, 'cloudy'),
+                    else_='cloudy'
+                ).label('cloud_status'),
+                func.count().label('count')
+            )
+            .select_from(self.cloud_measurements)
+            .join(self.measurements, self.cloud_measurements.c.measurement_id == self.measurements.c.id)
+            .join(self.sensors, self.measurements.c.sensor_id == self.sensors.c.id)
+            .where(self.sensors.c.location.in_((sensor_loc, )))
+            .filter(self.measurements.c.timestamp.between(start_date, end_date))
+            .group_by('cloud_status')
+            .order_by(func.count().desc())
+)
 
-        cloudy_data = self.session.execute(stmt).fetchall()
+        cloudy_data = self.session.execute(query).fetchall()
 
         # print(list(s[0] for s in cloudy_data))
 
