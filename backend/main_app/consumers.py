@@ -123,9 +123,6 @@ class Consumer(AsyncWebsocketConsumer):
             ''')
         minMaxAvgTemp = self.session.execute(stmt).fetchone()
 
-        # min max avg
-        print(minMaxAvgTemp)
-
         ##### HUMIDITY #####
         stmt = text(
             f'SELECT temperature_measurements.humidity, measurements.timestamp FROM temperature_measurements '
@@ -159,9 +156,6 @@ class Consumer(AsyncWebsocketConsumer):
             ''')
         minMaxAvgHum = self.session.execute(stmt).fetchone()
 
-        # min max avg
-        # print(minMaxAvgHum)
-
         ##### SENSORS #####
         stmt2 = text(
             f'SELECT * FROM sensors')
@@ -173,16 +167,14 @@ class Consumer(AsyncWebsocketConsumer):
         print(sens)
 
 
-
         ###### CLOUDY #####
 
         query = (
             select(
                 case(
-                    (self.cloud_measurements.c.cloud_cover_total <= 33, 'sunny'),
-                    (self.cloud_measurements.c.cloud_cover_total.between(34, 66), 'medium'),
-                    (self.cloud_measurements.c.cloud_cover_total > 66, 'cloudy'),
-                    else_='cloudy'
+                    (self.cloud_measurements.c.cloud_cover_total <= 33, 'Słonecznie'),
+                    (self.cloud_measurements.c.cloud_cover_total.between(34, 66), 'Umiarkowanie'),
+                    else_='Pochmurno'
                 ).label('cloud_status'),
                 func.count().label('count')
             )
@@ -193,11 +185,10 @@ class Consumer(AsyncWebsocketConsumer):
             .filter(self.measurements.c.timestamp.between(start_date, end_date))
             .group_by('cloud_status')
             .order_by(func.count().desc())
-)
+            )
 
         cloudy_data = self.session.execute(query).fetchall()
 
-        # print(list(s[0] for s in cloudy_data))
 
         ##### PRESSURE #####
 
@@ -206,8 +197,8 @@ class Consumer(AsyncWebsocketConsumer):
                 .join(self.measurements, self.pressure_measurements.c.measurement_id == self.measurements.c.id)
                 .join(self.sensors, self.measurements.c.sensor_id == self.sensors.c.id)
                 .where(self.sensors.c.location.in_((sensor_loc,)))
-                .limit(limit)
                 .filter(self.measurements.c.timestamp.between(start_date, end_date))
+                .limit(limit)
         )
 
         subquery = (
@@ -276,8 +267,10 @@ class Consumer(AsyncWebsocketConsumer):
                           "humidity_plot": {"humidity": hum_y, "date": date_humx,
                                             "max": round(minMaxAvgHum[0], 2), "min": round(minMaxAvgHum[1],2), "avg": round(minMaxAvgHum[2],2)}, "sensors": sens,
                           "cloudy_plot": {"status": list(s[0] for s in cloudy_data), "number": list(s[1] for s in cloudy_data)},
-                          "pressure_plot": {"date": press_date, "value": press_val},
-                          "windy_plot": {"speed": windy_speed, "gusts": windy_gusts, "direction": windy_direct, "date": windy_date },
+                          "pressure_plot": {"date": press_date, "value": press_val,
+                                            "max": round(minMaxAvgPress[0], 2), "min": round(minMaxAvgPress[1],2), "avg": round(minMaxAvgPress[2],2)},
+                          "windy_plot": {"speed": windy_speed, "gusts": windy_gusts, "direction": windy_direct, "date": windy_date,
+                                         "max": round(minMaxAvgWindSpeed[0], 2), "min": round(minMaxAvgWindSpeed[1],2), "avg": round(minMaxAvgWindSpeed[2],2)},
                           "sensor": sensor_loc}
         )
 

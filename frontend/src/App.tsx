@@ -30,15 +30,19 @@ function App() {
 
     // cloudy
     const [plotCloudy, setPlotCloudy] = useState([]);
-    // const [maxHum, setMaxHum] = useState(0);
-    // const [minHum, setMinHum] = useState(0);
-    // const [avgHum, setAvgHum] = useState(0);
+    const [plotCloudyPie, setPlotCloudyPie] = useState([]);
 
     // pressure
     const [plotPressure, setPlotPressure] = useState([]);
+    const [maxPress, setMaxPress] = useState(0);
+    const [minPress, setMinPress] = useState(0);
+    const [avgPress, setAvgPress] = useState(0);
 
     // wind
     const [plotWindy, setPlotWindy] = useState([]);
+    const [maxWind, setMaxWind] = useState(0);
+    const [minWind, setMinWind] = useState(0);
+    const [avgWind, setAvgWind] = useState(0);
 
     // sensors
     const [sensors, setSensors] = useState([]);
@@ -116,11 +120,28 @@ function App() {
                     }
                   ]);
 
+                // @ts-ignore
+                setPlotCloudyPie([
+                    // @ts-ignore
+                    { labels: data.cloudy_plot.status,
+                      values: data.cloudy_plot.number,
+                      type: 'pie',
+                      textinfo: 'label+percent',
+                      textposition: 'outside',
+                      automargin: true
+                    }
+                  ]);
+
 
 
                 // pressure
 
                 const pressureData = data.pressure_plot;
+
+                setMinPress(data.pressure_plot.min)
+                setMaxPress(data.pressure_plot.max)
+                setAvgPress(data.pressure_plot.avg)
+
                 const minPressure = Math.min(...pressureData.value);
                 const maxPressure = Math.max(...pressureData.value);
                 const yMin = minPressure - 20;
@@ -153,6 +174,10 @@ function App() {
 
                 // wind
                 const windData = data.windy_plot;
+                setMinWind(data.windy_plot.min)
+                setMaxWind(data.windy_plot.max)
+                setAvgWind(data.windy_plot.avg)
+
                 const fixedArrowLength = 2.5; // Adjust this length to make arrows shorter
           
                 const annotations = windData.date.map((date: string, idx: number) => {
@@ -296,99 +321,149 @@ function App() {
                 </div>
 
                 <div className="col offset-3" id="main">
-                    <h1 style={{margin: 20}}>Temperatura i wilgotność</h1>
+                    <h1 style={{margin: 20, marginTop: 95}}>Temperatura i wilgotność</h1>
 
                 <div style={{display: "inline-block"}}>
-                    <Plot
-                      data={plotData}
-                      layout={{
-                        title: 'Temperatura',
-                        xaxis: {
-                          title: 'Data',
-                          type: 'date',
-                        },
-                        yaxis: {
-                          title: 'Temperatura (°C)',
-                        },
-                      }}
-                    />
-
-                    <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
-                        <thead>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="col"></th>
-                            <th scope="col">Wartość temperatury</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
-                            <td>{minTemp}</td>
-                        </tr>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
-                            <td>{maxTemp}</td>
-                        </tr>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Średnia</th>
-                            <td>{avgTemp}</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                    <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
+                        <Plot
+                          data={plotData}
+                          layout={{
+                            title: 'Temperatura',
+                            xaxis: {
+                              title: 'Data',
+                              type: 'date',
+                            },
+                            yaxis: {
+                              title: 'Temperatura (°C)',
+                            },
+                          }}
+                        />
+                        <table style={{border: "1px gray solid", width: '100%', margin: "auto"}} className="table">
+                            <thead>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "gray"}} scope="col"></th>
+                                <th style={{ backgroundColor: "darkgray"}} scope="col">Wartość temperatury [°C]</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Minimalna</th>
+                                <td>{minTemp}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Maksymalna</th>
+                                <td>{maxTemp}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Średnia</th>
+                                <td>{avgTemp}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div style={{display: "inline-block"}}>
-                    <Plot
-                      data={plotHumidity}
-                      layout={{
-                        title: 'Wilgotność powietrza',
-                        xaxis: {
-                          title: 'Data',
-                          type: 'date',
-                        },
-                        yaxis: {
-                          title: 'Wilgotność (%)',
-                        },
-                      }}
-                    />
+                    <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
+                        <Plot
+                          data={plotHumidity}
+                          layout={{
+                            title: 'Wilgotność powietrza',
+                            xaxis: {
+                              title: 'Data',
+                              type: 'date',
+                            },
+                            yaxis: {
+                              title: 'Wilgotność (%)',
+                            },
+                          }}
+                        />
 
-                    <table style={{border: "1px black solid", width: 300, margin: "auto"}} className="table">
-                        <thead>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="col"></th>
-                            <th scope="col">Wilgotność</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Minimalna</th>
-                            <td>{minHum}</td>
-                        </tr>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Maksymalna</th>
-                            <td>{maxHum}</td>
-                        </tr>
-                        <tr>
-                            <th style={{border: "1px black solid"}} scope="row">Średnia</th>
-                            <td>{avgHum}</td>
-                        </tr>
-                        </tbody>
-                    </table>
-
+                        <table style={{border: "1px gray solid", width: '100%', margin: "auto"}} className="table">
+                            <thead>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "gray"}} scope="col"></th>
+                                <th style={{ backgroundColor: "darkgray"}} scope="col">Wilgotność [%]</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Minimalna</th>
+                                <td>{minHum}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Maksymalna</th>
+                                <td>{maxHum}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Średnia</th>
+                                <td>{avgHum}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
 
-              <h3>Ciśnienie</h3>
-
-
+              <div style={{display: "inline-block"}}>
+                <h1 style={{margin: 20, marginTop: 30}}>Ciśnienie</h1>
+                <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
                     {plotPressure}
+                    <table style={{border: "1px gray solid", width: '100%', margin: "auto"}} className="table">
+                            <thead>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "gray"}} scope="col"></th>
+                                <th style={{ backgroundColor: "darkgray"}} scope="col">Ciśnienie [hPa]</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Minimalne</th>
+                                <td>{minPress}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Maksymalne</th>
+                                <td>{maxPress}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Średnie</th>
+                                <td>{avgPress}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                </div>
+              </div>
 
-              <h3>Wiatr</h3>
 
+              <div style={{display: "inline-block"}}>
+                <h1 style={{margin: 20, marginTop: 30}}>Wiatr</h1>
+                <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
                     {plotWindy}
+                    <table style={{border: "1px gray solid", width: '100%', margin: "auto"}} className="table">
+                            <thead>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "gray"}} scope="col"></th>
+                                <th style={{ backgroundColor: "darkgray"}} scope="col">Prędkość wiatru [m/s]</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Minimalne</th>
+                                <td>{minWind}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Maksymalne</th>
+                                <td>{maxWind}</td>
+                            </tr>
+                            <tr>
+                                <th style={{border: "1px gray solid", backgroundColor: "lightgray"}} scope="row">Średnie</th>
+                                <td>{avgWind}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                </div>
+              </div>
 
-
-              <h3>Zachmurzenie</h3>
                 <Plot
                       data={plotCloudy}
                       layout={{
@@ -402,6 +477,15 @@ function App() {
                         },
                       }}
                     />
+
+                    <Plot
+                      data={plotCloudyPie}
+                      layout={{
+                        title: 'Zachmurzenie',
+                      }}
+                    />
+
+
                 </div>
             </div>
         </div>
