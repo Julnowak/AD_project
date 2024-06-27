@@ -209,14 +209,15 @@ if __name__ == '__main__':
     if result:
         last_appended_time = result[0]
     else:
-        last_appended_time = datetime.datetime.now(datetime.UTC)
+        temp = datetime.datetime.now(datetime.UTC)
+        last_appended_time = temp.replace(tzinfo=None)
     
     while True:
 
         current_time = datetime.datetime.now(datetime.UTC)
         naive_current_time = current_time.replace(tzinfo=None)
  
-        if (naive_current_time - last_appended_time) > datetime.timedelta(hours=1, minutes=15):
+        if (naive_current_time - last_appended_time) > datetime.timedelta(hours=1, minutes=16):
 
             Session = sessionmaker(bind=engine)
             session = Session()
@@ -264,6 +265,7 @@ if __name__ == '__main__':
 
                 unix_timestamp = current.Time()
                 act_time = datetime.datetime.utcfromtimestamp(unix_timestamp)
+                print(act_time)
 
                 add_combined_measurement(
                     sen['name'],
@@ -289,7 +291,7 @@ if __name__ == '__main__':
                 results = session.execute(stmt).fetchall()
                 print(results)
 
-            last_appended_hour = act_time
+            last_appended_time = act_time
             session.close()
 
     
