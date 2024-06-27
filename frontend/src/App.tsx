@@ -118,32 +118,115 @@ function App() {
 
                 // pressure
 
+                const pressureData = data.pressure_plot;
+                const minPressure = Math.min(...pressureData.value);
+                const maxPressure = Math.max(...pressureData.value);
+                const yMin = minPressure - 20;
+                const yMax = maxPressure + 10;
+          
+                console.log("Pressure Data:", pressureData);
+                console.log("Pressure Y-Axis Range:", yMin, yMax);
+
                 // @ts-ignore
-                setPlotPressure([
-                    // @ts-ignore
-                    { x: data.pressure_plot.date,
-                      y: data.pressure_plot.value,
-                      fill: 'tozeroy',
-                      type: 'scatter',
-                      mode: 'lines',
-                      line: { color: 'blue' },
-                    }
-                  ]);
+                setPlotPressure(
+                  // @ts-ignore
+                  <Plot
+                    data={[
+                      {
+                        x: pressureData.date,
+                        y: pressureData.value,
+                        fill: 'tozeroy',
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { color: 'blue' },
+                      },
+                    ]}
+                    layout={{
+                      title: 'Ciśnienie',
+                      xaxis: { title: 'Data', type: 'date' },
+                      yaxis: { title: 'Ciśnienie (hPa)', range: [yMin, yMax] },
+                    }}
+                  />
+                );
+
+
+
+                // // @ts-ignore
+                // setPlotPressure([
+                //     // @ts-ignore
+                //     { x: data.pressure_plot.date,
+                //       y: data.pressure_plot.value,
+                //       fill: 'tozeroy',
+                //       type: 'scatter',
+                //       mode: 'lines',
+                //       line: { color: 'blue' },
+                //     }
+                //   ]);
+
 
                 // wind
+                const windData = data.windy_plot;
+                const fixedArrowLength = 2.5; // Adjust this length to make arrows shorter
+          
+                const annotations = windData.date.map((date: string, idx: number) => {
+                  const angleRad = windData.direction[idx] * (Math.PI / 180); // Convert degrees to radians
+                  const x0 = new Date(date).getTime();
+                  const y0 = windData.speed[idx];
+                  const x1 = x0 + fixedArrowLength * Math.cos(angleRad) * 3600000; // Convert to milliseconds
+                  const y1 = y0 + fixedArrowLength * Math.sin(angleRad);
+          
+                  return {
+                    x: new Date(x0),
+                    y: y0,
+                    ax: new Date(x1),
+                    ay: y1,
+                    xref: 'x',
+                    yref: 'y',
+                    axref: 'x',
+                    ayref: 'y',
+                    showarrow: true,
+                    arrowhead: 2,
+                    arrowsize: 1,
+                    arrowwidth: 1,
+                    arrowcolor: 'black',
+                  };
+                });
+                
+                // @ts-ignore
+                setPlotWindy(
+                  // @ts-ignore
+                  <Plot
+                    data={[
+                      {
+                        x: windData.date,
+                        y: windData.speed,
+                        mode: 'markers',
+                        marker: { color: 'blue', size: 1 },
+                        name: 'Wind Speed',
+                      },
+                    ]}
+                    layout={{
+                      title: 'Prędkość wiatru',
+                      xaxis: { title: 'Data', type: 'date' },
+                      yaxis: { title: 'Szybkość (m/s)' },
+                      annotations: annotations,
+                      showlegend: false,
+                    }}
+                  />
+                );
+
 
                 // @ts-ignore
-                setPlotWindy([
-                    // @ts-ignore
-                    { x: data.windy_plot.date,
-                      y: data.windy_plot.speed,
-                      fill: 'tozeroy',
-                      type: 'scatter',
-                      mode: 'lines',
-                      line: { color: 'blue' },
-                    }
-                  ]);
-
+                // setPlotWindy([
+                //     // @ts-ignore
+                //     { x: data.windy_plot.date,
+                //       y: data.windy_plot.speed,
+                //       fill: 'tozeroy',
+                //       type: 'scatter',
+                //       mode: 'lines',
+                //       line: { color: 'blue' },
+                //     }
+                //   ]);
 
                 setSensor(data.sensor)
 
@@ -186,7 +269,7 @@ function App() {
                   type: 'date',
                 },
                 yaxis: {
-                  title: 'Temperatura',
+                  title: 'Temperatura (°C)',
                 },
               }}
             />
@@ -225,7 +308,7 @@ function App() {
                   type: 'date',
                 },
                 yaxis: {
-                  title: 'Wilgotność',
+                  title: 'Wilgotność (%)',
                 },
               }}
             />
@@ -258,7 +341,7 @@ function App() {
 
       <h3>Ciśnienie</h3>
 
-        <Plot
+        {/* <Plot
               data={plotPressure}
               layout={{
                 title: 'Ciśnienie',
@@ -267,14 +350,15 @@ function App() {
                   type: 'date',
                 },
                 yaxis: {
-                  title: 'Wilgotność',
+                  title: 'Ciśnienie (hPa)',
                 },
               }}
-            />
+            /> */}
+            {plotPressure}
 
       <h3>Wiatr</h3>
 
-        <Plot
+        {/* <Plot
               data={plotWindy}
               layout={{
                 title: 'Ciśnienie',
@@ -283,10 +367,12 @@ function App() {
                   type: 'date',
                 },
                 yaxis: {
-                  title: 'Wilgotność',
+                  title: 'Szybkość [m/s]',
                 },
               }}
-            />
+            /> */}
+            {plotWindy}
+
 
       <h3>Zachmurzenie</h3>
         <Plot
@@ -302,6 +388,7 @@ function App() {
                 },
               }}
             />
+            
 
       <form onSubmit={handleSubmit} style={{ width: 400, margin: "auto"}}>
         <div>
