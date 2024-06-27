@@ -3,14 +3,18 @@ import './App.css';
 // @ts-ignore
 import Plot from 'react-plotly.js';
 
-// interface Sensor = {
-//     id: number,
-//     name: string
-// }
+interface Sensor {
+    id: number,
+    name: string,
+    location: string,
+}
+
 function App() {
 
     const [socket, setSocket] = useState<WebSocket | null>(null);
     const [limit, setLimit] = useState<string | null>('100');
+    const [startdate, setStartDate] = useState<string|null>(null);
+    const [enddate, setEndDate] = useState<string|null>(null);
 
     // temperature
     const [plotData, setPlotData] = useState([]);
@@ -30,15 +34,26 @@ function App() {
     // const [minHum, setMinHum] = useState(0);
     // const [avgHum, setAvgHum] = useState(0);
 
+    // pressure
+    const [plotPressure, setPlotPressure] = useState([]);
+
+    // wind
+    const [plotWindy, setPlotWindy] = useState([]);
+
     // sensors
     const [sensors, setSensors] = useState([]);
+    const [sensor, setSensor] = useState<Sensor|null| string>(null);
 
     useEffect(() => {
 
         const newSocket = new WebSocket(`ws://127.0.0.1:8000/ws/socket/`);
         // @ts-ignore
         setSocket(newSocket);
-        newSocket.onopen = () => console.log("WebSocket connected");
+        newSocket.onopen = () => {
+            console.log("WebSocket connected");
+            let btn = document.getElementById("subbtn")
+            btn?.click();
+        };
         newSocket.onclose = () => {
             console.log("WebSocket disconnected");
         };
@@ -50,6 +65,7 @@ function App() {
 
     useEffect(() => {
     if (socket) {
+
             socket.onmessage = (event) => {
 
                 const data = JSON.parse(event.data);
@@ -100,6 +116,37 @@ function App() {
                     }
                   ]);
 
+                // pressure
+
+                // @ts-ignore
+                setPlotPressure([
+                    // @ts-ignore
+                    { x: data.pressure_plot.date,
+                      y: data.pressure_plot.value,
+                      fill: 'tozeroy',
+                      type: 'scatter',
+                      mode: 'lines',
+                      line: { color: 'blue' },
+                    }
+                  ]);
+
+                // wind
+
+                // @ts-ignore
+                setPlotWindy([
+                    // @ts-ignore
+                    { x: data.windy_plot.date,
+                      y: data.windy_plot.speed,
+                      fill: 'tozeroy',
+                      type: 'scatter',
+                      mode: 'lines',
+                      line: { color: 'blue' },
+                    }
+                  ]);
+
+
+                setSensor(data.sensor)
+
             }
     }
 
@@ -111,14 +158,18 @@ function App() {
     event.preventDefault();
     if (socket) {
 
-        console.log(limit)
+        console.log(sensor)
         const data = {
             limit: limit,
+            sensor: sensor,
+            startdate: startdate,
+            enddate: enddate,
         };
         socket.send(JSON.stringify(data));
 
     }
     };
+
 
   return (
     <div className="App">
@@ -206,7 +257,37 @@ function App() {
 
 
       <h3>Ciśnienie</h3>
+
+        <Plot
+              data={plotPressure}
+              layout={{
+                title: 'Ciśnienie',
+                xaxis: {
+                  title: 'Data',
+                  type: 'date',
+                },
+                yaxis: {
+                  title: 'Wilgotność',
+                },
+              }}
+            />
+
       <h3>Wiatr</h3>
+
+        <Plot
+              data={plotWindy}
+              layout={{
+                title: 'Ciśnienie',
+                xaxis: {
+                  title: 'Data',
+                  type: 'date',
+                },
+                yaxis: {
+                  title: 'Wilgotność',
+                },
+              }}
+            />
+
       <h3>Zachmurzenie</h3>
         <Plot
               data={plotCloudy}
@@ -230,21 +311,26 @@ function App() {
 
         <div>
             <label>Zakres</label>
-            <input type="date" className="form-control" />
-            <input type="date" className="form-control" />
+            <input type="date" className="form-control" onChange={e => setStartDate(e.target.value)}/>
+            <input type="date" className="form-control" onChange={e => setEndDate(e.target.value)}/>
         </div>
 
         <div>
-            <label>Krok czasowy</label>
-            <select className="form-select" aria-label="Default select example">
-                <option value="1">Godzina</option>
-                <option value="2">Dzień</option>
-                <option value="3">Miesiąc</option>
+            <label>Wybierz czujnik</label>
+            <select className="form-select" aria-label="Default select example" onChange={e => setSensor(e.target.value)}>
+                {sensors.map((d: Sensor) => {
+                    return(
+                        <option key={d.id} value={d.location}>{d.location}</option>
+                        )
+                })}
+
             </select>
         </div>
-        <button className="btn btn-dark" type="submit" >Filtruj</button>
+
+        <button className="btn btn-dark" id="subbtn" type="submit" >Filtruj</button>
       </form>
-        {/*{sensors.map(d => (<li key={d.id}>{d.name}</li>))} */}
+
+
     </div>
   );
 }
