@@ -114,11 +114,9 @@ function App() {
                     // @ts-ignore
                     { x: data.cloudy_plot.status,
                       y: data.cloudy_plot.number,
-                      type: 'bar',
-                      mode: 'markers',
-                      marker: {color: 'red'},
-                    }
-                  ]);
+                      type: 'bar',mode: 'markers',
+                      marker: {color: ['#00adc4', '#FFBB28', '#ff7442']},
+                    }]);
 
                 // @ts-ignore
                 setPlotCloudyPie([
@@ -126,8 +124,11 @@ function App() {
                     { labels: data.cloudy_plot.status,
                       values: data.cloudy_plot.number,
                       type: 'pie',
-                      textinfo: 'label+percent',
-                      textposition: 'outside',
+                      textinfo: 'percent',
+
+                      marker: {
+                        colors: ['#00adc4', '#FFBB28', '#ff7442']
+                      },
                       automargin: true
                     }
                   ]);
@@ -161,7 +162,7 @@ function App() {
                         fill: 'tozeroy',
                         type: 'scatter',
                         mode: 'lines',
-                        line: { color: 'blue' },
+
                       },
                     ]}
                     layout={{
@@ -434,7 +435,6 @@ function App() {
                 </div>
               </div>
 
-
               <div style={{display: "inline-block"}}>
                 <h1 style={{margin: 20, marginTop: 30}}>Wiatr</h1>
                 <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
@@ -464,10 +464,13 @@ function App() {
                 </div>
               </div>
 
-                <Plot
+                 <h1 style={{margin: 20, marginTop: 30}}>Zachmurzenie</h1>
+                 <div style={{display: "inline-block", marginBottom: 30}}>
+                    <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
+                    <Plot
                       data={plotCloudy}
                       layout={{
-                        title: 'Zachmurzenie',
+                        title: 'Zachmurzenie - wykres słupkowy',
                         xaxis: {
                           title: 'Status',
                           type: 'category',
@@ -477,13 +480,23 @@ function App() {
                         },
                       }}
                     />
+                    </div>
+                 </div>
 
-                    <Plot
-                      data={plotCloudyPie}
-                      layout={{
-                        title: 'Zachmurzenie',
-                      }}
-                    />
+                 <div style={{display: "inline-block", marginBottom: 30}}>
+                    <div style={{border: "1px lightgray solid", margin:5, marginTop:20, borderRadius: 10, padding: 20}}>
+                        <Plot
+                          data={plotCloudyPie}
+                          layout={{
+                            title: 'Zachmurzenie - wykres kołowy',
+                          }}
+                        />
+                    </div>
+                 </div>
+
+
+
+
 
 
                 </div>

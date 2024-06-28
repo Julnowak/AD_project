@@ -1,17 +1,11 @@
 import datetime
 import json
-import time
-
-from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
-# from .models import UserLike, Product, UserProduct, AppUser
-# from .serializers import UserLikeSerializer
-
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
-from sqlalchemy.orm import relationship, sessionmaker, declarative_base
-from sqlalchemy import select, distinct, func, case
-from sqlalchemy import MetaData, Table, inspect, text, between
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import select, func, case
+from sqlalchemy import MetaData, Table, inspect, text
 
 Base = declarative_base()
 metadata = MetaData()
@@ -71,10 +65,10 @@ class Consumer(AsyncWebsocketConsumer):
         try:
             start_date = text_data_json['startdate']
             if start_date is None:
-                start_date = datetime.datetime(1000,1,1,1)
+                start_date = datetime.datetime(1990,1,1,1)
             print(start_date)
         except:
-            start_date = datetime.datetime(1000,1,1,1)
+            start_date = datetime.datetime(1990,1,1,1)
 
         try:
             end_date = text_data_json['enddate']
@@ -87,7 +81,6 @@ class Consumer(AsyncWebsocketConsumer):
             sensor_loc = text_data_json['sensor']
             if sensor_loc is None:
                 sensor_loc = "New York"
-            print(sensor_loc)
         except:
             sensor_loc = "New York"
 
@@ -98,7 +91,6 @@ class Consumer(AsyncWebsocketConsumer):
                     f'WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"'
                     f'LIMIT {limit}')
         results = self.session.execute(stmt).fetchall()
-        # print(results)
 
         temp_y = []
         date_x = []
@@ -131,7 +123,6 @@ class Consumer(AsyncWebsocketConsumer):
             f'WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"'
             f'LIMIT {limit}')
         results = self.session.execute(stmt).fetchall()
-        print(results)
 
         hum_y = []
         date_humx = []
@@ -164,7 +155,6 @@ class Consumer(AsyncWebsocketConsumer):
         sens = []
         for s in sensors:
             sens.append({"id": s[0], "name": s[1], "location": s[2]})
-        print(sens)
 
 
         ###### CLOUDY #####
@@ -187,8 +177,26 @@ class Consumer(AsyncWebsocketConsumer):
             .order_by(func.count().desc())
             )
 
-        cloudy_data = self.session.execute(query).fetchall()
+        stmt = text(f'''
+                    SELECT cloud_status, COUNT(*) FROM(
+            SELECT 
+                CASE
+                    WHEN cloud_cover_total <= 33 THEN 'Słonecznie'
+                    WHEN cloud_cover_total > 33 AND cloud_cover_total <= 66 THEN 'Umiarkowanie'
+                    ELSE 'Pochmurnie'
+                END 
+            AS cloud_status, cloud_cover_total,  measurements.timestamp,  sensors.location
+            FROM cloud_measurements
+            JOIN measurements ON measurements.id = cloud_measurements.measurement_id 
+            JOIN sensors ON sensors.id = measurements.sensor_id
+            WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"
+            LIMIT {limit}
+            ) AS subquery
+            GROUP BY cloud_status
+                ''')
 
+        cloudy_data = self.session.execute(stmt).fetchall()
+        print(cloudy_data)
 
         ##### PRESSURE #####
 
@@ -201,19 +209,23 @@ class Consumer(AsyncWebsocketConsumer):
                 .limit(limit)
         )
 
-        subquery = (
-            select(
-                func.max(self.pressure_measurements.c.surface_pressure).label('max_press'),
-                func.min(self.pressure_measurements.c.surface_pressure).label('min_press'),
-                func.avg(self.pressure_measurements.c.surface_pressure).label('avg_press')
-            )
-                .join(self.measurements, self.pressure_measurements.c.measurement_id == self.measurements.c.id)
-                .join(self.sensors, self.measurements.c.sensor_id == self.sensors.c.id)
-        )
-
-        minMaxAvgPress = self.session.execute(subquery).fetchone()
+        stmt = text(
+            f'''
+                        SELECT 
+                            MAX(subquery.surface_pressure), 
+                            MIN(subquery.surface_pressure), 
+                            AVG(subquery.surface_pressure) 
+                        FROM (
+                            SELECT pressure_measurements.surface_pressure
+                            FROM pressure_measurements
+                            JOIN measurements ON measurements.id = pressure_measurements.measurement_id 
+                            JOIN sensors ON sensors.id = measurements.sensor_id 
+                            WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"
+                            LIMIT {limit}
+                        ) AS subquery
+                    ''')
+        minMaxAvgPress = self.session.execute(stmt).fetchone()
         pressure_data = self.session.execute(query).fetchall()
-        # print(pressure_data)
 
         press_val = []
         press_date = []
@@ -234,17 +246,23 @@ class Consumer(AsyncWebsocketConsumer):
 
         )
 
-        subquery = (
-            select(
-                func.max(self.wind_measurements.c.wind_speed_10m).label('max_wind_speed'),
-                func.min(self.wind_measurements.c.wind_speed_10m).label('min_wind_speed'),
-                func.avg(self.wind_measurements.c.wind_speed_10m).label('avg_wind_speed')
-            )
-                .join(self.measurements, self.wind_measurements.c.measurement_id == self.measurements.c.id)
-                .join(self.sensors, self.measurements.c.sensor_id == self.sensors.c.id)
-        )
+        stmt = text(
+            f'''
+                                SELECT 
+                                    MAX(subquery.wind_speed_10m), 
+                                    MIN(subquery.wind_speed_10m), 
+                                    AVG(subquery.wind_speed_10m) 
+                                FROM (
+                                    SELECT wind_measurements.wind_speed_10m
+                                    FROM wind_measurements
+                                    JOIN measurements ON measurements.id = wind_measurements.measurement_id 
+                                    JOIN sensors ON sensors.id = measurements.sensor_id 
+                                    WHERE location = "{sensor_loc}" AND measurements.timestamp BETWEEN "{start_date}" AND "{end_date}"
+                                    LIMIT {limit}
+                                ) AS subquery
+                            ''')
 
-        minMaxAvgWindSpeed = self.session.execute(subquery).fetchone()
+        minMaxAvgWindSpeed = self.session.execute(stmt).fetchone()
         windy_data = self.session.execute(query).fetchall()
 
         windy_speed = []
@@ -259,7 +277,6 @@ class Consumer(AsyncWebsocketConsumer):
             windy_date.append(str(i[3]))
 
         # print(windy_data)
-
 
         await self.channel_layer.group_send(
             self.socket, {'type': 'info.message', "temperature_plot": {"temperature": temp_y, "date": date_x,
